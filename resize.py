@@ -19,9 +19,9 @@ class Resize():
 
         self.root_path = os.getcwd()
         self.output_path = f"{self.root_path}/output/"
-        self.output_car_path = f"{self.output_path}/car/"
-        self.output_csv_path = f"{self.output_path}/csv/"
-        self.train_csv_path = f"{self.output_path}/train/"
+        self.output_car_path = f"{self.output_path}car/"
+        self.output_csv_path = f"{self.output_path}csv/"
+        self.train_csv_path = f"{self.output_path}train/"
         self.target_dir = ""
         self.img_ext = ".jpg"
 
@@ -143,6 +143,7 @@ class Resize():
         if (resized_df <= 200).all() == False:
             raise Exception("200!")
         print(f'resized_df:{resized_df}')
+        print(self.target_dir)
 
         os.makedirs(f"./output/train/{self.target_dir}", exist_ok=True)
         resize_image.save(f"./output/train/{self.target_dir}/train_{file_num}{self.img_ext}")
@@ -168,16 +169,18 @@ class Resize():
                     print("!!!!!!!!!!!!!!!")
                     for i, (ind, ser) in enumerate(vertex.iterrows()):
                         self.file_name = f"{ind}-{i}"
-                        self.file_num = f"{self.file_num}-{i}"
-                        df_concat = self.img_df_resize(ser,dirr, path,df_concat, df_resize_concat, yolo_path=ind)
+                        self.file_num = self.file_name
+                        print(self.file_name)
+                        rename_ser = ser.rename(self.file_name)
+                        df_concat,df_resize_concat = self.img_df_resize(rename_ser,dirr, path,df_concat, df_resize_concat, yolo_path=ind)
                 else:
-                    df_concat = self.img_df_resize(vertex,dirr, path,df_concat, df_resize_concat)
+                    df_concat,df_resize_concat = self.img_df_resize(vertex,dirr, path,df_concat, df_resize_concat)
 
 
             df_T=df_concat.T
             df_T[1:].to_csv(f'{output}.csv')
-            # df_concat_T=df_resize_concat.T
-            # df_concat_T[1:].to_csv(f'{output}.csv')
+            df_concat_T=df_resize_concat.T
+            df_concat_T[1:].to_csv(f'{output}_train.csv')
 
     def img_df_resize(self, vertex,dirr, path,df_concat,df_resize_concat, yolo_path=None):
         image = Image.open(f'{dirr}/{path}')
@@ -199,7 +202,7 @@ class Resize():
         if predict_pos is None:
             del image,org_image,vertex
             print(f"{self.file_name} is skipped")
-            return df_concat
+            return df_concat,df_resize_concat
         plate_npx=np.array([vertex["lu_x"],vertex["ld_x"],vertex["ru_x"],vertex["rd_x"]])
         plate_npy=np.array([vertex["lu_y"],vertex["ld_y"],vertex["ru_y"],vertex["rd_y"]])
         # one car
@@ -212,10 +215,9 @@ class Resize():
         # detect_char_on_plate()
         resized_df = self.resize_image(one_car_img, self.file_num, moved_vertex)
         df_resize_concat = pd.concat([df_resize_concat, resized_df],axis=1)
-        print(self.file_num)
         del image,org_image,vertex
         # print(df_concat)
-        return df_concat
+        return df_concat,df_resize_concat
     #plate_vertex = csv_df.query()
 
     #car_vertex, plate_vertex = [[lu, ld, rd, ru], plate_vertex] = car_search_model(im, plate_vertex)
