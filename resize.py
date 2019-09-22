@@ -25,6 +25,8 @@ class Resize():
         self.target_dir = ""
         self.img_ext = ".jpg"
 
+        self.skiped_array = []
+
     def choice_box(self, vertex, out_boxes, out_scores, out_classes, image_size):
         predict_pos=[]
         x=[vertex["lu_x"],vertex["ld_x"],vertex["ru_x"],vertex["rd_x"]]
@@ -155,6 +157,7 @@ class Resize():
 
         # df = df_na[1:]
         df = df_na
+        err_arr=[]
         for dirr in kv.keys():
             ls = [filename for filename in os.listdir(dirr) if not filename.startswith('.')]
             count=0
@@ -162,9 +165,14 @@ class Resize():
             for path in ls:
                 self.file_name = path.split('/')[-1]
                 self.file_num = re.sub(r'\.jpeg|\.jpg|\.png|\.JPG|\.PNG', '', self.file_name)
+                print(self.file_name)
                 print("---")
                 print(f"file_num:{self.file_num}")
-                vertex = df.loc[self.file_num]
+                try:
+                    vertex = df.loc[self.file_num]
+                except:
+                    err_arr.append(self.file_num)
+                    continue
                 if isinstance(vertex, pd.DataFrame):
                     print("!!!!!!!!!!!!!!!")
                     for i, (ind, ser) in enumerate(vertex.iterrows()):
@@ -181,6 +189,7 @@ class Resize():
             df_T[1:].to_csv(f'{output}.csv')
             df_concat_T=df_resize_concat.T
             df_concat_T[1:].to_csv(f'{output}_train.csv')
+            print(err_arr)
 
     def img_df_resize(self, vertex,dirr, path,df_concat,df_resize_concat, yolo_path=None):
         image = Image.open(f'{dirr}/{path}')
@@ -201,6 +210,7 @@ class Resize():
         predict_pos = self.choice_box(vertex, out_boxes, out_scores, out_classes, image_size)
         if predict_pos is None:
             del image,org_image,vertex
+            self.skiped_array.append(self.file_name)
             print(f"{self.file_name} is skipped")
             return df_concat,df_resize_concat
         plate_npx=np.array([vertex["lu_x"],vertex["ld_x"],vertex["ru_x"],vertex["rd_x"]])
